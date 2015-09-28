@@ -1,9 +1,3 @@
----
-services:
-platforms:
-author: azure
----
-
 # storage-queue-java-getting-started
 Basic Operations with Azure Storage Queue Service 
 ## Running this sample
