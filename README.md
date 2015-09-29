@@ -1,7 +1,7 @@
 ---
-services: Storage
-platforms: Java
-author: Azure Storage
+services: storage
+platforms: java
+author: perrysk-msft
 ---
 
 # Azure Storage: Queue
