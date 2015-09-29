@@ -8,7 +8,7 @@ author: mjeelanimsft
 
 This sample demonstrates how to use the Queue Storage service. Queue storage provides reliable messaging for workflow processing and for communication between components of cloud services.
 
-Note: If you don't have a Microsoft Azure subscription you can get a FREE trial account [here](http://go.microsoft.com/fwlink/?LinkId=330212)
+Note: If you don't have a Microsoft Azure subscription you can get a FREE trial account [here](http://go.microsoft.com/fwlink/?LinkId=330212).
 
 ## Running this sample
 
@@ -22,7 +22,7 @@ To run the sample using the Storage Emulator (default option):
 
 To run the sample using the Storage Service
 
-1. Open the config.properties file and comment out the connection string for the emulator (UseDevelopmentStorage=True) and uncomment the connection string for the storage service (AccountName=[]...)
+1. Open the config.properties file and comment out the connection string for the emulator (UseDevelopmentStorage=True) and uncomment the connection string for the storage service (AccountName=[]...).
 2. Create a Storage Account through the Azure Portal and provide your [AccountName] and [AccountKey] in the config.properties file. See https://azure.microsoft.com/en-us/documentation/articles/storage-create-storage-account/ for more information
 3. Set breakpoints and run the project. 
 
