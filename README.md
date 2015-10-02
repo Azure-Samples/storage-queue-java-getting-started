@@ -4,7 +4,7 @@ platforms: java
 author: mjeelanimsft
 ---
 
-# Azure Storage: Queue
+# Getting Started with Azure Queue Service in Java
 
 This sample demonstrates how to use the Queue Storage service. Queue storage provides reliable messaging for workflow processing and for communication between components of cloud services.
 
