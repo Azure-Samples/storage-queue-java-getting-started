@@ -24,6 +24,13 @@
       </resource>
     </resources>
     <plugins>
+    <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <configuration>
+             <mainClass>QueueBasics</mainClass>
+        </configuration>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -32,6 +39,29 @@
             <source>1.8</source>
             <target>1.8</target>
           </configuration>
+      </plugin>
+      <plugin>
+        <!-- Generate a fully packaged executable jar with dependencies -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+          <executions>
+            <execution>
+               <goals>
+                 <goal>attached</goal>
+               </goals>
+               <phase>package</phase>
+               <configuration>
+                 <descriptorRefs>
+                   <descriptorRef>jar-with-dependencies</descriptorRef>
+                </descriptorRefs>
+                <archive>
+                  <manifest>
+                    <mainClass>QueueBasics</mainClass>
+                  </manifest>
+                </archive>
+              </configuration>
+           </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
