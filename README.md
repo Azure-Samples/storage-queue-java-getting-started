@@ -30,9 +30,9 @@ To run the sample using Azure CLI:
 
 1. [Install Azure CLI](https://azure.microsoft.com/en-us/documentation/articles/xplat-cli-install/)
 2. [Login with Azure CLI](https://azure.microsoft.com/en-us/documentation/articles/xplat-cli-connect/)
-3. Run ./setup.js
+3. Run node setup.js
 4. mvn compile exec:java
-5. Run ./teardown.js
+5. Run node teardown.js
 
 ## More information
 - [What is a Storage Account](http://azure.microsoft.com/en-us/documentation/articles/storage-whatis-account/)
