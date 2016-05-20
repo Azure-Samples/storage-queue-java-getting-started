@@ -10,7 +10,7 @@
     <dependency>
       <groupId>com.microsoft.azure</groupId>
       <artifactId>azure-storage</artifactId>
-      <version>3.1.0</version>
+      <version>4.2.0</version>
     </dependency>
   </dependencies>
   <build>
@@ -18,15 +18,13 @@
     <resources>
       <resource>
         <directory>resources</directory>
-        <includes>
-          <include>config.properties</include>
-        </includes>
       </resource>
     </resources>
     <plugins>
     <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
+        <version>1.4.0</version>
         <configuration>
              <mainClass>QueueBasics</mainClass>
         </configuration>

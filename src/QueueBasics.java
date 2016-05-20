@@ -22,11 +22,15 @@ import java.net.URISyntaxException;
 import java.security.InvalidKeyException;
 import java.util.EnumSet;
 import java.util.Properties;
+import java.util.Scanner;
 import java.util.UUID;
 
 import com.microsoft.azure.storage.CloudStorageAccount;
 import com.microsoft.azure.storage.StorageException;
-import com.microsoft.azure.storage.queue.*;
+import com.microsoft.azure.storage.queue.CloudQueue;
+import com.microsoft.azure.storage.queue.CloudQueueClient;
+import com.microsoft.azure.storage.queue.CloudQueueMessage;
+import com.microsoft.azure.storage.queue.MessageUpdateFields;
 
 /*
  * Azure Queue Service Sample - Demonstrate how to perform common tasks using the Microsoft Azure Queue Service
@@ -38,12 +42,20 @@ import com.microsoft.azure.storage.queue.*;
  *  - Queue Service Concepts - https://msdn.microsoft.com/library/azure/dd179353.aspx
  *  - Queue Service REST API - https://msdn.microsoft.com/library/azure/dd179363.aspx
  *  - Queue Service Java API - http://azure.github.io/azure-storage-java/
+ *  - Delegating Access with Shared Access Signatures - http://azure.microsoft.com/en-us/documentation/articles/storage-dotnet-shared-access-signature-part-1/
+ *  - Storage Emulator - http://azure.microsoft.com/en-us/documentation/articles/storage-use-emulator/
  *
  * Instructions:
- *      This sample can only be run using your Azure Storage account by updating the config.properties file with your "AccountName" and "Key".
+ *      This sample can be run using either the Azure Storage Emulator or your Azure Storage
+ *      account by updating the config.properties file with your "AccountName" and "Key".
+ *
+ *      To run the sample using the Storage Emulator (default option - Only available on Microsoft Windows OS)
+ *          1.  Start the Azure Storage Emulator by pressing the Start button or the Windows key and searching for it
+ *              by typing "Azure Storage Emulator". Select it from the list of applications to start it.
+ *          2.  Set breakpoints and run the project.
  *
  *      To run the sample using the Storage Service
- *          1.  Open the app.config file and comment out the connection string for the emulator (UseDevelopmentStorage=True) and
+ *          1.  Open the config.properties file and comment out the connection string for the emulator (UseDevelopmentStorage=True) and
  *              uncomment the connection string for the storage service (AccountName=[]...)
  *          2.  Create a Storage Account through the Azure Portal and provide your [AccountName] and [AccountKey] in the config.properties file.
  *              See https://azure.microsoft.com/en-us/documentation/articles/storage-create-storage-account/ for more information.
@@ -51,151 +63,140 @@ import com.microsoft.azure.storage.queue.*;
  */
 public class QueueBasics {
 
-    protected static CloudQueue queue = null;
-    protected final static String queueNamePrefix = "queuebasics";
-	
      /**
      * Azure Storage Queue Sample
      *
      * @param args No input arguments are expected from users.
      * @throws Exception
      */
-    public static void main(String[] args) throws Exception 
+    public static void main(String[] args) throws Exception
     {
-        System.out.println("Azure Storage Queue sample - Starting.\n");
+        System.out.println("Azure Storage Queue sample - Starting.");
+
+        Scanner scan = null;
+        CloudQueueClient queueClient = null;
+        CloudQueue queue1 = null;
+        CloudQueue queue2 = null;
 
         try {
-            // 1. Create a queue  
-            queue = createQueue();
-            
-            // 2. Insert a message into the queue 
-            System.out.println("2. Insert a single message into a queue");
-            queue.addMessage(new CloudQueueMessage("Hello World!"));
-    
-            // 3. Peek at the message in the front of a queue without removing it from the queue using PeekMessage
-            System.out.println("3. Peek at the next message");
-            CloudQueueMessage peekedMessage = queue.peekMessage(); 
-            if (peekedMessage != null)
-            { 
-                System.out.println("The peeked message is: " + peekedMessage.toString());
-            }
-    
-            // 4. De-queue the next message
-            // You de-queue a message in two steps. Call RetrieveMessage at which point the message becomes invisible to any other code reading messages 
-            // from this queue for a default period of 30 seconds. To finish removing the message from the queue, you call DeleteMessage. 
-            // This two-step process ensures that if your code fails to process a message due to hardware or software failure, another instance 
-            // of your code can get the same message and try again. 
-            System.out.println("4. De-queue the next message");
-            CloudQueueMessage message = queue.retrieveMessage();
-            if (message != null)
-            {
-                System.out.println("Processing & deleting message with content: " + message.toString());
-                queue.deleteMessage(message);
-            }
-            
-            // 5. Insert another test message into the queue 
-            System.out.println("5. Insert another test message ");
-            queue.addMessage(new CloudQueueMessage("Hello World Again!"));
+            // Create a scanner for user input
+            scan = new Scanner(System.in);
 
-            // 6. Change the contents of an already queued message            
-            System.out.println("6. Change the contents of a queued message");
-            CloudQueueMessage msg = queue.retrieveMessage();
-            msg.setMessageContent("Updated contents.");
-            
-            EnumSet<MessageUpdateFields> updateFields = 
-                    EnumSet.of(MessageUpdateFields.CONTENT,
-                    MessageUpdateFields.VISIBILITY);
-            
-            queue.updateMessage(
-                msg, 
-                0,  // For the purpose of the sample make the update visible immediately
-                updateFields, null, null);
+            // Create a queue client for interacting with the queue service
+            queueClient = getQueueClientReference();
 
-            // 7. Enqueue 20 messages by which to demonstrate batch retrieval
-            System.out.println("7. Enqueue 20 messages."); 
-            for (int i = 0; i < 20; i++)
-            {
-                queue.addMessage(new CloudQueueMessage(Integer.toString(i) + " - Hello World"));
+            // Create new queues with randomized names
+            System.out.println("\nCreate queues for the sample demonstration");
+            queue1 = createQueue(queueClient, createRandomName("queuebasics-"));
+            System.out.println(String.format("\tSuccessfully created the queue \"%s\".", queue1.getName()));
+            queue2 = createQueue(queueClient, createRandomName("queuebasics-"));
+            System.out.println(String.format("\tSuccessfully created the queue \"%s\".", queue2.getName()));
+
+            // Insert a message into the queue
+            System.out.println("\nInsert a couple of messages into the queue");
+            queue1.addMessage(new CloudQueueMessage("Hello!"));
+            queue1.addMessage(new CloudQueueMessage("Hello World!"));
+            System.out.println("\tSucessfully enqueued the messages.");
+
+            // Peek at the message in the front of a queue without removing it from the queue using PeekMessage
+            System.out.println("\nPeek at the message at the front of the queue");
+            CloudQueueMessage peekedMessage = queue1.peekMessage();
+            if (peekedMessage != null) {
+                System.out.println("\tThe peeked message is: " + peekedMessage.getMessageContentAsString());
             }
-    
-            // 8. The FetchAttributes method asks the Queue service to retrieve the queue attributes, including an approximation of message count 
-            System.out.println("8. Get the queue length");
-            queue.downloadAttributes();
-            long cachedMessageCount = queue.getApproximateMessageCount();
-            System.out.println("Approximate number of messages in queue: " + cachedMessageCount);
-    
-            // 9. Dequeue a batch of 21 messages (up to 32) and set visibility timeout to 5 minutes. Note we are dequeuing 21 messages because the earlier
-            // UpdateMessage method left a message on the queue hence we are retrieving that as well. 
-            System.out.println("9. Dequeue 21 messages, allowing 5 minutes for the clients to process.");
-            
-            for (CloudQueueMessage cqm : queue.retrieveMessages(21,5,null,null))
-            {
-                System.out.println("Processing & deleting message with content: " + cqm.toString());
-    
+
+            // De-queue the next message
+            // You de-queue a message in two steps. Call RetrieveMessage at which point the message becomes invisible to any other code reading messages
+            // from this queue for a default period of 30 seconds. To finish removing the message from the queue, you call DeleteMessage.
+            // This two-step process ensures that if your code fails to process a message due to hardware or software failure, another instance
+            // of your code can get the same message and try again.
+            System.out.println("\nDe-queue the next message");
+            CloudQueueMessage message = queue1.retrieveMessage();
+            if (message != null) {
+                System.out.println("\tProcessing & deleting message with content: " + message.getMessageContentAsString());
+                queue1.deleteMessage(message);
+            }
+
+            // Insert another test message into the queue
+            System.out.println("\nInsert another message into the queue");
+            queue1.addMessage(new CloudQueueMessage("Hello World Again!"));
+            System.out.println("\tSucessfully enqueued the message.");
+
+            // Change the contents of an already queued message
+            System.out.println("\nChange the contents of a queued message");
+            EnumSet<MessageUpdateFields> updateFields = EnumSet.of(MessageUpdateFields.CONTENT, MessageUpdateFields.VISIBILITY);
+            CloudQueueMessage updatedMessage = queue1.retrieveMessage();
+            updatedMessage.setMessageContent(updatedMessage.getMessageContentAsString() + " - updated");
+            queue1.updateMessage(updatedMessage, 0 /* Visible immediately */, updateFields, null, null);
+            System.out.println("\tSucessfully updated the message.");
+
+            // Enqueue 20 messages by which to demonstrate batch retrieval
+            System.out.println("\nEnqueue 20 messages into the second queue to demonstrate batch retrieval");
+            for (int i = 0; i < 20; i++) {
+                queue2.addMessage(new CloudQueueMessage(Integer.toString(i) + " - Hello World"));
+            }
+            System.out.println("\tSucessfully enqueued the messages.");
+
+            // The FetchAttributes method asks the Queue service to retrieve the queue attributes, including an approximation of message count
+            System.out.println("\nGet the queue length");
+            queue2.downloadAttributes();
+            System.out.println("\tApproximate number of messages in the second queue: " + queue2.getApproximateMessageCount());
+
+            // Dequeue a batch of 15 messages (up to 32) and set visibility timeout to 5 minutes.
+            System.out.println("\nDequeue 15 messages, allowing 5 minutes for the clients to process.");
+            for (CloudQueueMessage messageItr : queue2.retrieveMessages(15, 5, null, null)) {
+                System.out.println("\tProcessing & deleting message with content: " + messageItr.getMessageContentAsString());
+
                 // Process all messages in less than 5 minutes, deleting each message after processing.
-                queue.deleteMessage(cqm);
+                queue2.deleteMessage(messageItr);
+            }
+
+            // Enumerate all queues starting with the prefix "queuebasics-"
+            System.out.println("\nEnumerate all queues starting with the prefix \"queuebasics-\"");
+            for (CloudQueue queue : queueClient.listQueues("queuebasics-")) {
+                queue.downloadAttributes();
+                System.out.println(String.format("\tQueue: %s. Approximate number of messages: %d.", queue.getName(), queue.getApproximateMessageCount()));
             }
         }
         catch (Throwable t) {
             printException(t);
         }
         finally {
-            System.out.println("\nPress any key to delete queue and exit.");
-            System.in.read();
+            // Delete the queues (If you do not want to delete the queues comment out the block of code below)
+            System.out.print("\nDelete the queues that we created. Press any key to continue...");
+            scan.nextLine();
 
-            // 10. Delete a queue
-            deleteQueue(queue);
+            if (queue1 != null && queue1.deleteIfExists() == true) {
+                System.out.println(String.format("\tSuccessfully deleted the queue: %s", queue1.getName()));
+            }
+
+            if (queue2 != null && queue2.deleteIfExists() == true) {
+                System.out.println(String.format("\tSuccessfully deleted the queue: %s", queue2.getName()));
+            }
+
+            // Close the scanner
+            if (scan != null) {
+                scan.close();
+            }
         }
 
-        System.out.println("Azure Storage Queue sample - Completed.\n");
+        System.out.println("\nAzure Storage Queue sample - Completed.\n");
     }
-    
+
     /**
-     * Validates the connection string and returns the storage account.
+     * Validates the connection string and returns the storage queue client.
      * The connection string must be in the Azure connection string format.
      *
-     * @param storageConnectionString Connection string for the storage service or the emulator
-     * @return The newly created CloudStorageAccount object
+     * @return The newly created CloudQueueClient object
      *
-     * @throws URISyntaxException
-     * @throws IllegalArgumentException
-     * @throws InvalidKeyException
-     */
-    private static CloudStorageAccount getStorageAccountFromConnectionString(String storageConnectionString) throws IllegalArgumentException, URISyntaxException, InvalidKeyException 
-    {
-        CloudStorageAccount storageAccount;
-        try {
-            storageAccount = CloudStorageAccount.parse(storageConnectionString);
-        }
-        catch (IllegalArgumentException|URISyntaxException e) {
-            System.out.println("\nConnection string specifies an invalid URI.");
-            System.out.println("Please confirm the connection string is in the Azure connection string format.");
-            throw e;
-        }
-        catch (InvalidKeyException e) {
-            System.out.println("\nConnection string specifies an invalid key.");
-            System.out.println("Please confirm the AccountName and AccountKey in the connection string are valid.");
-            throw e;
-        }
-
-        return storageAccount;
-    }
-
-    /**
-     * Creates and returns a Queue for the sample application to use.
-     *
-     * @return The newly created CloudQueue object
-     *
-     * @throws StorageException
      * @throws RuntimeException
      * @throws IOException
      * @throws URISyntaxException
      * @throws IllegalArgumentException
      * @throws InvalidKeyException
-     * @throws IllegalStateException
      */
-    private static CloudQueue createQueue() throws StorageException, RuntimeException, IOException, InvalidKeyException, IllegalArgumentException, URISyntaxException, IllegalStateException 
-    {
+    private static CloudQueueClient getQueueClientReference() throws RuntimeException, IOException, IllegalArgumentException, URISyntaxException, InvalidKeyException {
+
         // Retrieve the connection string
         Properties prop = new Properties();
         try {
@@ -210,74 +211,85 @@ public class QueueBasics {
             System.out.println("\nFailed to load config.properties file.");
             throw e;
         }
-        String storageConnectionString = prop.getProperty("StorageConnectionString");
 
-        // Retrieve storage account information from connection string.
-        CloudStorageAccount storageAccount = getStorageAccountFromConnectionString(storageConnectionString);
+        CloudStorageAccount storageAccount;
+        try {
+            storageAccount = CloudStorageAccount.parse(prop.getProperty("StorageConnectionString"));
+        }
+        catch (IllegalArgumentException|URISyntaxException e) {
+            System.out.println("\nConnection string specifies an invalid URI.");
+            System.out.println("Please confirm the connection string is in the Azure connection string format.");
+            throw e;
+        }
+        catch (InvalidKeyException e) {
+            System.out.println("\nConnection string specifies an invalid key.");
+            System.out.println("Please confirm the AccountName and AccountKey in the connection string are valid.");
+            throw e;
+        }
 
-        // Create a queue client for interacting with the queue service
-        CloudQueueClient queueClient = storageAccount.createCloudQueueClient();
+        return storageAccount.createCloudQueueClient();
+    }
 
-        // Create a randomized queue name
-        String queueName = queueNamePrefix + UUID.randomUUID().toString().replace("-", "");
-        System.out.println(String.format("1. Create a queue with name \"%s\" for the demo", queueName));
+    /**
+     * Creates and returns a queue for the sample application to use.
+     *
+     * @param queueClient CloudQueueClient object
+     * @param queueName Name of the queue to create
+     * @return The newly created CloudQueue object
+     *
+     * @throws StorageException
+     * @throws RuntimeException
+     * @throws IOException
+     * @throws URISyntaxException
+     * @throws IllegalArgumentException
+     * @throws InvalidKeyException
+     * @throws IllegalStateException
+     */
+    private static CloudQueue createQueue(CloudQueueClient queueClient, String queueName) throws StorageException, RuntimeException, IOException, InvalidKeyException, IllegalArgumentException, URISyntaxException, IllegalStateException {
 
         // Create a new queue
         CloudQueue queue = queueClient.getQueueReference(queueName);
         try {
-            if (queue.createIfNotExists()) {
-                System.out.println(String.format("\tSuccessfully created queue. ", queueName));
-            }
-            else {
-                System.out.println(String.format("\tQueue already exists."));
+            if (queue.createIfNotExists() == false) {
                 throw new IllegalStateException(String.format("Queue with name \"%s\" already exists.", queueName));
             }
         }
-        catch (StorageException e) {
-            System.out.println("\nCaught storage exception from the client.");
-            System.out.println("If running with the default configuration please make sure you have started the storage emulator.");
-            throw e;
+        catch (StorageException s) {
+            if (s.getCause() instanceof java.net.ConnectException) {
+                System.out.println("Caught connection exception from the client. If running with the default configuration please make sure you have started the storage emulator.");
+            }
+            throw s;
         }
 
         return queue;
     }
 
     /**
-     * Delete the specified queue.
+     * Creates and returns a randomized name based on the prefix file for use by the sample.
      *
-     * @param queue The {@link CloudQueue} object to delete
-     *
-     * @throws StorageException
+     * @param namePrefix The prefix string to be used in generating the name.
+     * @return The randomized name
      */
-    private static void deleteQueue(CloudQueue queue) throws StorageException 
-    {
-        try
-        {
-            System.out.println(String.format("10. Delete a queue with name \"%s\" .", queue.getName()));
-            
-            if (queue != null) {
-                queue.deleteIfExists();
-                System.out.println(String.format("\tSuccessfully deleted queue. ", queue.getName()));
-            }
-        }
-        catch (StorageException e) 
-        {
-            System.out.println("\nCaught storage exception from the client.");
-            System.out.println("If running with the default configuration please make sure you have started the storage emulator.");
-            throw e;
-        }
+    private static String createRandomName(String namePrefix) {
+
+        return namePrefix + UUID.randomUUID().toString().replace("-", "");
     }
 
-    /*
+    /**
      * Print the exception stack trace
      *
      * @param ex Exception to be printed
      */
-    public static void printException(Throwable ex) 
-    {
+    public static void printException(Throwable t) {
+
         StringWriter stringWriter = new StringWriter();
         PrintWriter printWriter = new PrintWriter(stringWriter);
-        ex.printStackTrace(printWriter);
-        System.out.println(String.format("Exception details:\n%s\n", stringWriter.toString()));
+        t.printStackTrace(printWriter);
+        if (t instanceof StorageException) {
+            if (((StorageException) t).getExtendedErrorInformation() != null) {
+                System.out.println(String.format("\nError: %s", ((StorageException) t).getExtendedErrorInformation().getErrorMessage()));
+            }
+        }
+        System.out.println(String.format("Exception details:\n%s", stringWriter.toString()));
     }
 }
