@@ -31,65 +31,33 @@ import com.microsoft.azure.storage.queue.CloudQueue;
 import com.microsoft.azure.storage.queue.CloudQueueClient;
 import com.microsoft.azure.storage.queue.CloudQueueMessage;
 import com.microsoft.azure.storage.queue.MessageUpdateFields;
-
-/*
- * Azure Queue Service Sample - Demonstrate how to perform common tasks using the Microsoft Azure Queue Service
- * including creating a Queue, common queue operations, processing batch messages in a queue.
- *
- * Documentation References:
- *  - What is a Storage Account - http://azure.microsoft.com/en-us/documentation/articles/storage-whatis-account/
- *  - How to use Azure Queue - https://azure.microsoft.com/en-us/documentation/articles/storage-java-how-to-use-queue-storage/
- *  - Queue Service Concepts - https://msdn.microsoft.com/library/azure/dd179353.aspx
- *  - Queue Service REST API - https://msdn.microsoft.com/library/azure/dd179363.aspx
- *  - Queue Service Java API - http://azure.github.io/azure-storage-java/
- *  - Delegating Access with Shared Access Signatures - http://azure.microsoft.com/en-us/documentation/articles/storage-dotnet-shared-access-signature-part-1/
- *  - Storage Emulator - http://azure.microsoft.com/en-us/documentation/articles/storage-use-emulator/
- *
- * Instructions:
- *      This sample can be run using either the Azure Storage Emulator or your Azure Storage
- *      account by updating the config.properties file with your "AccountName" and "Key".
- *
- *      To run the sample using the Storage Emulator (default option - Only available on Microsoft Windows OS)
- *          1.  Start the Azure Storage Emulator by pressing the Start button or the Windows key and searching for it
- *              by typing "Azure Storage Emulator". Select it from the list of applications to start it.
- *          2.  Set breakpoints and run the project.
- *
- *      To run the sample using the Storage Service
- *          1.  Open the config.properties file and comment out the connection string for the emulator (UseDevelopmentStorage=True) and
- *              uncomment the connection string for the storage service (AccountName=[]...)
- *          2.  Create a Storage Account through the Azure Portal and provide your [AccountName] and [AccountKey] in the config.properties file.
- *              See https://azure.microsoft.com/en-us/documentation/articles/storage-create-storage-account/ for more information.
- *          3.  Set breakpoints and run the project.
+/**
+ * This sample illustrates basic usage of the Azure queue storage service.
  */
 public class QueueBasics {
 
      /**
      * Azure Storage Queue Sample
      *
-     * @param args No input arguments are expected from users.
      * @throws Exception
      */
-    public static void main(String[] args) throws Exception
+    public static void runSamples() throws Exception
     {
         System.out.println("Azure Storage Queue sample - Starting.");
 
-        Scanner scan = null;
-        CloudQueueClient queueClient = null;
+        CloudQueueClient queueClient;
         CloudQueue queue1 = null;
         CloudQueue queue2 = null;
 
         try {
-            // Create a scanner for user input
-            scan = new Scanner(System.in);
-
             // Create a queue client for interacting with the queue service
             queueClient = getQueueClientReference();
 
             // Create new queues with randomized names
             System.out.println("\nCreate queues for the sample demonstration");
-            queue1 = createQueue(queueClient, createRandomName("queuebasics-"));
+            queue1 = createQueue(queueClient, DataGenerator.createRandomName("queuebasics-"));
             System.out.println(String.format("\tSuccessfully created the queue \"%s\".", queue1.getName()));
-            queue2 = createQueue(queueClient, createRandomName("queuebasics-"));
+            queue2 = createQueue(queueClient, DataGenerator.createRandomName("queuebasics-"));
             System.out.println(String.format("\tSuccessfully created the queue \"%s\".", queue2.getName()));
 
             // Insert a message into the queue
@@ -159,12 +127,11 @@ public class QueueBasics {
             }
         }
         catch (Throwable t) {
-            printException(t);
+            PrintHelper.printException(t);
         }
         finally {
             // Delete the queues (If you do not want to delete the queues comment out the block of code below)
-            System.out.print("\nDelete the queues that we created. Press any key to continue...");
-            scan.nextLine();
+            System.out.print("\nDelete the queues that we created.");
 
             if (queue1 != null && queue1.deleteIfExists() == true) {
                 System.out.println(String.format("\tSuccessfully deleted the queue: %s", queue1.getName()));
@@ -172,11 +139,6 @@ public class QueueBasics {
 
             if (queue2 != null && queue2.deleteIfExists() == true) {
                 System.out.println(String.format("\tSuccessfully deleted the queue: %s", queue2.getName()));
-            }
-
-            // Close the scanner
-            if (scan != null) {
-                scan.close();
             }
         }
 
@@ -262,34 +224,5 @@ public class QueueBasics {
         }
 
         return queue;
-    }
-
-    /**
-     * Creates and returns a randomized name based on the prefix file for use by the sample.
-     *
-     * @param namePrefix The prefix string to be used in generating the name.
-     * @return The randomized name
-     */
-    private static String createRandomName(String namePrefix) {
-
-        return namePrefix + UUID.randomUUID().toString().replace("-", "");
-    }
-
-    /**
-     * Print the exception stack trace
-     *
-     * @param ex Exception to be printed
-     */
-    public static void printException(Throwable t) {
-
-        StringWriter stringWriter = new StringWriter();
-        PrintWriter printWriter = new PrintWriter(stringWriter);
-        t.printStackTrace(printWriter);
-        if (t instanceof StorageException) {
-            if (((StorageException) t).getExtendedErrorInformation() != null) {
-                System.out.println(String.format("\nError: %s", ((StorageException) t).getExtendedErrorInformation().getErrorMessage()));
-            }
-        }
-        System.out.println(String.format("Exception details:\n%s", stringWriter.toString()));
     }
 }
