@@ -205,6 +205,7 @@ class QueueAdvanced {
 
             System.out.println("Set queue permissions");
             final Calendar cal = new GregorianCalendar(TimeZone.getTimeZone("UTC"));
+            cal.add(Calendar.MINUTE, -30);
             final Date start = cal.getTime();
             cal.add(Calendar.MINUTE, 30);
             final Date expiry = cal.getTime();
