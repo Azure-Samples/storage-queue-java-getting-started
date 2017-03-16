@@ -1,4 +1,4 @@
-﻿---
+---
 services: storage
 platforms: java
 author: mjeelanimsft
